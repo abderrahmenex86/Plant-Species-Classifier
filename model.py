@@ -9,7 +9,7 @@ class PlantClassifier(nn.Module):
 
         in_features = self.model.classifier[3].in_features
 
-        self.model.classifier[2] = nn.Dropout(p=0.6, inplace=True)
+        self.model.classifier[2] = nn.Dropout(p=0.5, inplace=True)
         self.model.classifier[3] = nn.Linear(in_features, num_classes)
 
     def forward(self, x):
