@@ -15,7 +15,7 @@ Flora is a deep learning training and evaluation pipeline built in PyTorch to cl
 - **Efficient Fine-Tuning**: Built around a MobileNetV3-Large backbone, using customized classification layers with a $0.5$ dropout rate to prevent overfitting.
 - **Differential Learning Rates**: Optimizes training dynamics by updating the pretrained feature extractor at a lower learning rate (`1e-5`) while training the custom classifier head at a higher rate (`1e-3`).
 - **Data Augmentations**: Real-time training pipeline using random horizontal and vertical flips, color jittering, and normalization.
-- **Comprehensive Evaluation**: Measures and logs Top-1 Accuracy, Top-5 Accuracy, and Macro F1-Score over 1,081 distinct classes from the Pl@ntNet-300K dataset.
+- **Comprehensive Evaluation**: Measures and logs Top-1 Accuracy, Top-5 Accuracy, and Macro F1-Score over ~400 distinct classes from the Pl@ntNet-300K dataset.
 - **Dynamic Learning Rate Scaling**: Utilizes `ReduceLROnPlateau` targeting the validation Macro F1 score.
 
 ## Tech Stack
