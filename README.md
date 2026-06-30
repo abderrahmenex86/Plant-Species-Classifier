@@ -1,63 +1,95 @@
-# Flora
+# Plant Species Classifier
 
-<div align="center">
-  <p>
-    <img src="https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white" alt="PyTorch" />
-    <img src="https://img.shields.io/badge/TorchMetrics-000000?style=for-the-badge&logo=pytorch&logoColor=white" alt="TorchMetrics" />
-    <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
-  </p>
-</div>
+This project is a modular, hardware-optimized deep learning training and evaluation pipeline built in pure PyTorch to classify plant species. It generates high-efficiency classification weights utilized within the offline [FloraLens](https://github.com/abderrahmenex86/FloraLens) ecosystem.
 
-Flora is a deep learning training and evaluation pipeline built in PyTorch to classify plant species. It generates the high-efficiency classification weights used directly within the [FloraLens](https://github.com/abderrahmenex86/FloraLens) on-device ecosystem.
+This pipeline strictly implements a flat directory architecture, dynamic hyperparameter configuration, layer-stratified optimization, and defensive execution checks.
 
-## Features
+______________________________________________________________________
 
-- **Efficient Fine-Tuning**: Built around a MobileNetV3-Large backbone, using customized classification layers with a $0.5$ dropout rate to prevent overfitting.
-- **Differential Learning Rates**: Optimizes training dynamics by updating the pretrained feature extractor at a lower learning rate (`1e-5`) while training the custom classifier head at a higher rate (`1e-3`).
-- **Data Augmentations**: Real-time training pipeline using random horizontal and vertical flips, color jittering, and normalization.
-- **Comprehensive Evaluation**: Measures and logs Top-1 Accuracy, Top-5 Accuracy, and Macro F1-Score over ~400 distinct classes from the Pl@ntNet-300K dataset.
-- **Dynamic Learning Rate Scaling**: Utilizes `ReduceLROnPlateau` targeting the validation Macro F1 score.
+## Directory Architecture
 
-## Tech Stack
+- `dataset.py`: Handles raw image parsing, `torchvision.transforms.v2` preprocessing pipelines, and hardware-specific `DataLoader` configuration (pin memory, prefetching, persistent workers).
+- `models.py`: Houses the network architecture (MobileNetV3-Large with modified dropout and classification head) and target losses, including cross-entropy and focal loss formulations.
+- `factory.py`: The assembly layer responsible for constructing model instances, stratified optimizers, and learning rate schedulers.
+- `trainer.py`: Holds the main execution loop for training and evaluation epochs, along with tracking metrics, saving checkpoints, and loading past runs.
+- `tester.py`: Orchestrates a quick sanity check with sliced inputs to verify tensor bounds, gradients, and parameters before launching scaled training.
+- `optimize.py`: Manages automatic hyperparameter tuning using Optuna studies via a silenced, global progress-tracked interface.
+- `infer.py`: Runs smart target-based predictions by loading historic configuration files directly from saved run directories.
+- `main.py`: The single dispatcher entry point for core ML lifecycle operations (`test`, `train`, `optimize`, `infer`).
+- `tools.py`: Helper scripts for utilities like data layout verification and training metric plots.
 
-- **Machine Learning:** PyTorch, TorchVision
-- **Metrics Tracking:** TorchMetrics (Multiclass Accuracy, Multiclass F1-Score)
-- **Data Handling & Pipelines:** PyTorch ImageFolder, DataLoader with pin memory and prefetch optimizations
-- **Execution Utilities:** tqdm progress indicators, custom train/evaluation logging helpers
+______________________________________________________________________
 
-## Getting Started
+## Execution Sequence
 
-### Prerequisites
-- Python (v3.10+)
-- CUDA-compatible GPU (highly recommended for training)
-- Pl@ntNet-300K dataset (or any custom folder-structured image dataset)
+To prepare, validate, optimize, and execute models on your dataset, follow this standardized execution path.
 
-### Installation
+### 1. Verify Dataset Alignment
 
-1. **Clone the repository:**
-```bash
-git clone https://github.com/abderrahmenex86/flora.git
-cd flora
-```
-2. **Install dependencies:**
-```bash
-pip install -r requirements.txt
-```
-3. **Data Preparation:**
-Place the training and validation images inside a structured directory:
-
-```Text
-dataset/plantnet_300K/images/
-├── train/
-└── val/
-```
-4. **Run Training:**
+Ensure your dataset structures (by default, `dataset/plantnet_300K/images/train` and `dataset/plantnet_300K/images/val`) are correctly formatted, categories match, and image files are uncorrupted:
 
 ```bash
-python train.py
+python tools.py --mode verify
 ```
+
+### 2. Run Sanity Check
+
+Test basic network operations on a slice of 5 images. This step validates tensor dimensions, asserts that the forward and backward passes execute correctly, checks that gradients are calculated for active weights, and tests parameter optimizer grouping:
+
+```bash
+python main.py --mode test
+```
+
+### 3. Hyperparameter Optimization
+
+Execute an Optuna study on a 512-image training slice across 10 epochs. When finished, it prints a terminal-ready string containing the best learning rate and weight decay parameters:
+
+```bash
+python main.py --mode optimize
+```
+
+### 4. Execute Full Training
+
+Train the network using custom configurations or the exact arguments outputted by the optimization run. Additional parameters can be passed as dynamic flags to override default configurations on the fly:
+
+```bash
+python main.py --mode train --learning_rate 0.001 --weight_decay 0.01 --loss_type focal --num_workers_train 8
+```
+
+### 5. Resuming from Interrupted States
+
+If a run was stopped, restore training from the last checkpoint folder. The script loads weights, optimizers, learning rate histories, scheduler states, and epoch counts to resume without disruption:
+
+```bash
+python main.py --mode train --resume --resume_directory artifacts/YYYYMMDD_HHMMSS_mobilenetv3_large
+```
+
+### 6. Analyze History
+
+Generate validation loss, top-1 accuracy, and macro F1 metric trend graphs from a selected training epoch:
+
+```bash
+python tools.py --mode plot --run_directory artifacts/YYYYMMDD_HHMMSS_mobilenetv3_large
+```
+
+### 7. Run Smart Inference
+
+Pass a specific historic output folder and a sample image path. The script dynamically reads `hyperparameters.json` and `class_names.json`, designs the model, loads `best_model.pth`, and outputs the prediction:
+
+```bash
+python main.py --mode infer --run_directory artifacts/YYYYMMDD_HHMMSS_mobilenetv3_large --image_path path/to/test_image.jpg
+```
+
+______________________________________________________________________
+
+## System Requirements
+
+- Python 3.10+
+- CUDA-capable GPU (highly recommended)
+- Dependencies listed in `requirements.txt` (including `torch`, `torchvision`, `torchmetrics`, `torchinfo`, `optuna`, `matplotlib`, and `tqdm`)
 
 ## Related Projects
-- [FloraLens](https://github.com/abderrahmenex86/FloraLens) — The offline host Android application
-- [Pesti](https://github.com/abderrahmenex86/pesti) — Pest classification model
-- [Segmenti](https://github.com/abderrahmenex86/segmenti) — Disease segmentation model
+
+- [FloraLens](https://github.com/abderrahmenex86/FloraLens)
+- [Pesti](https://github.com/abderrahmenex86/pesti)
+- [Plant-Disease-Segmentation](https://github.com/abderrahmenex86/Plant-Disease-Segmentation)
