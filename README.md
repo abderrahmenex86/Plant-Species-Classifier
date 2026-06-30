@@ -20,6 +20,26 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
+## Benchmarking & Comparative Visualization
+
+To analyze training dynamics across multiple iterations and parameter configurations, the system supports side-by-side performance benchmarking.
+
+![Experimental Comparisons](docs/figs/experiments_comparison_metrics.png)
+
+A comparative evaluation tool (`plot.py` within the experiments workspace directory) automates execution tracking and run verification:
+
+1. **Abstract Syntax Tree (AST) Parsing**: The script scans subdirectories containing both `training_history.json` and `train.py`. It uses Python's native `ast` module to dynamically extract hyperparameter configurations (such as epochs, batch size, learning rates, and weight decay) directly from the run code. This bypasses the need for specific, hardcoded folder naming schemes.
+1. **Side-by-Side Performance Mapping**: It compiles the data into a three-panel dashboard plotting Cross-Entropy Loss, Top-1 Accuracy, and Macro F1-Score curves across both training (solid curves) and validation (dashed curves) states.
+1. **Explicit Legend Formatting**: The extracted parameters are compiled directly into explicit, descriptive legend labels mapping each curve to its corresponding run configuration.
+
+To execute the tracking compiler and update the comparative dashboard, navigate to your experiments directory and execute:
+
+```bash
+python plot.py
+```
+
+______________________________________________________________________
+
 ## Execution Sequence
 
 To prepare, validate, optimize, and execute models on your dataset, follow this standardized execution path.
